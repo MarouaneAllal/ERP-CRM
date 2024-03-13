@@ -1,0 +1,67 @@
+version: '3'
+
+services:
+
+  mariadb:
+    image: mariadb:10.6
+    container_name: mariadb
+    restart: unless-stopped
+    command: --character_set_client=utf8 --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - ./dolibarr_db:/var/lib/mysql
+    environment:
+      - MYSQL_DATABASE=dolibarr
+      - MYSQL_USER=dolibarr
+      - MYSQL_PASSWORD=dolibarr
+      - MYSQL_RANDOM_ROOT_PASSWORD=yes
+    networks:
+      db_network:
+        ipv4_address: 172.20.0.2
+
+  dolibarr:
+    image: upshift/dolibarr:14.0
+    container_name: dolibarr
+    restart: unless-stopped
+    depends_on:
+      - mariadb
+    ports:
+      - "8200:80"
+    environment:
+      - DOLI_ADMIN_LOGIN=admin
+      - DOLI_ADMIN_PASSWORD=p4ssw0rd
+      - DOLI_DB_HOST=mariadb
+      - DOLI_DB_NAME=dolibarr
+      - DOLI_DB_USER=dolibarr
+      - DOLI_DB_PASSWORD=dolibarr
+      - TZ=Europe/PARIS
+      - LANG=fr_FR
+    volumes:
+      - ./doli_html:/var/www/html
+      - ./doli_docs:/var/www/documents
+    networks:
+      db_network:
+        ipv4_address: 172.20.0.3
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      - mariadb
+    environment:
+      - PMA_HOST=mariadb
+      - PMA_USER=dolibarr
+      - PMA_PASSWORD=dolibarr
+    ports:
+      - "8080:80"
+    networks:
+      db_network:
+        ipv4_address: 172.20.0.4
+
+networks:
+  db_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
